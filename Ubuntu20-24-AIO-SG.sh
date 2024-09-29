@@ -6,7 +6,7 @@ SSH_Port1='22'
 SSH_Port2='299'
 
 # Dropbear Ports
-Dropbear_Port1='143'
+Dropbear_Port1='790'
 Dropbear_Port2='550'
 
 # Stunnel Ports
@@ -40,8 +40,8 @@ MyVPS_Time='Africa/Johannesburg'
 
 # Telegram IDs
 My_Chat_ID='835541277'
-My_Channel_ID='1482504739'
-My_Bot_Key='6349897878:AAEz1I_fpSFRlcmwYerIMrPcMsyxfM5TQ2E'
+My_Channel_ID='-1001785530473'
+My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
 
 ######################################
 ###Deekay AutoScript Code Begins...###
@@ -771,7 +771,7 @@ echo '{
   "obfs": "Tekidoer",
   "auth": {
     "mode": "passwords",
-    "config": ["Tekidoer123"]
+    "config": ["Tekidoer@123"]
   }
 }
 ' >> /etc/hysteria/config.json
@@ -976,7 +976,7 @@ cd
 echo " "
 echo " "
 echo "PREMIUM SCRIPT SUCCESSFULLY INSTALLED!"
-echo "SCRIPT BY TEKIDOER DEVS"
+echo "SCRIPT BY DOPE~KID"
 echo "PLEASE WAIT..."
 echo " "
 

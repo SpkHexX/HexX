@@ -1,4 +1,5 @@
 #!/bin/bash
+#by tekidoer
 #Script Variables
 
 # OpenSSH Ports
@@ -6,7 +7,7 @@ SSH_Port1='22'
 SSH_Port2='299'
 
 # Dropbear Ports
-Dropbear_Port1='790'
+Dropbear_Port1='143'
 Dropbear_Port2='550'
 
 # Stunnel Ports
@@ -44,7 +45,7 @@ My_Channel_ID='-1001785530473'
 My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
 
 ######################################
-###Deekay AutoScript Code Begins...###
+###Tekidoer AutoScript Code Begins...###
 ######################################
 
 function ip_address(){
@@ -86,7 +87,7 @@ rm .profile
 wget "https://raw.githubusercontent.com/dopekid30/AutoScriptDebian10/main/Resources/Other/.profile"
 
 # Installing some important machine essentials
-apt install -y neofetch sslh dnsutils stunnel4 squid dropbear nano sudo wget unzip tar gzip iptables bc cron dos2unix whois screen ruby python3 python3-pip apt-transport-https software-properties-common gnupg2 ca-certificates curl net-tools nginx certbot jq python3-certbot-dns-cloudflare figlet git gcc uwsgi uwsgi-plugin-python3 python3-dev perl expect libdbi-perl libnet-ssleay-perl libauthen-pam-perl libio-pty-perl apt-show-versions
+apt install -y neofetch sslh dnsutils stunnel4 squid dropbear nano sudo wget unzip tar gzip iptables bc cron dos2unix whois screen ruby python-is-python2 python3 python3-pip apt-transport-https software-properties-common gnupg2 ca-certificates curl net-tools nginx certbot jq python3-certbot-dns-cloudflare figlet git gcc uwsgi uwsgi-plugin-python3 python3-dev perl expect libdbi-perl libnet-ssleay-perl libauthen-pam-perl libio-pty-perl apt-show-versions
 
 # Installing a text colorizer and design
 gem install lolcat
@@ -130,8 +131,6 @@ rm -f /etc/ssh/sshd_config
 
 # Creating a SSH server config using cat eof tricks
 cat <<'MySSHConfig' > /etc/ssh/sshd_config
-# Deekay Script OpenSSH Server config
-# Deekay Script
 Port myPORT1
 Port myPORT2
 AddressFamily inet
@@ -173,11 +172,12 @@ echo '/usr/sbin/nologin' >> /etc/shells
 
 # Restarting openssh service
 systemctl restart ssh
+systemctl status --no-pager ssh
 
 # Removing some duplicate config file
 rm -rf /etc/default/dropbear*
  
-# creating dropbear config using cat eof tricks
+# Creating dropbear config using cat eof tricks
 cat <<'MyDropbear' > /etc/default/dropbear
 # Deekay Script Dropbear Config
 NO_START=0
@@ -196,6 +196,7 @@ sed -i "s|PORT02|$Dropbear_Port2|g" /etc/default/dropbear
 
 # Restarting dropbear service
 systemctl restart dropbear
+systemctl status --no-pager dropbear
 
 cd /etc/default/
 mv sslh sslh-old
@@ -221,18 +222,16 @@ systemctl restart sslh
 systemctl status --no-pager sslh
 cd
 
-# STUNNEL
+# Stunnel
 StunnelDir=$(ls /etc/default | grep stunnel | head -n1)
 
 # Creating stunnel startup config using cat eof tricks
 cat <<'MyStunnelD' > /etc/default/$StunnelDir
-# Deekay Script Stunnel Config
 ENABLED=1
 FILES="/etc/stunnel/*.conf"
 OPTIONS=""
 BANNER="/etc/zorro-luffy"
 PPP_RESTART=0
-# RLIMITS="-n 4096 -d unlimited"
 RLIMITS=""
 MyStunnelD
 
@@ -241,7 +240,6 @@ rm -rf /etc/stunnel/*
 
 # Creating stunnel server config
 cat <<'MyStunnelC' > /etc/stunnel/stunnel.conf
-# My Stunnel Config
 pid = /var/run/stunnel.pid
 cert = /etc/stunnel/stunnel.pem
 client = no
@@ -309,7 +307,7 @@ enL3UGT+BhRAPiA1I5CcG29RqjCzQoaCNg==
 -----END CERTIFICATE-----
 MyStunnelCert
 
-# setting stunnel ports
+# Setting stunnel ports
 sed -i "s|MyDomain|$Cloudflare_Domain|g" /etc/stunnel/stunnel.conf
 sed -i "s|Stunnel_Port|$Stunnel_Port|g" /etc/stunnel/stunnel.conf
 sed -i "s|MainPort|$MainPort|g" /etc/stunnel/stunnel.conf
@@ -324,78 +322,98 @@ loc=/etc/socksproxy
 mkdir -p $loc
 
 cat << Socks > $loc/proxy.py
-#!/usr/bin/env python
-import os, getopt
-from time import sleep, strftime
-from re import split, match
-from select import select
-from concurrent.futures import ThreadPoolExecutor
-from socket import socket,  SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, getaddrinfo, timeout, AF_INET
-from threading import Thread
+import socket, threading, thread, select, signal, sys, time, getopt
 
-ploc=os.path.dirname(os.path.realpath(__file__))
-recvbuff = 65536
-success = b"$WsResponse"
+# CONFIG
+LISTENING_ADDR = '0.0.0.0'
+LISTENING_PORT = $WsPort
 
-class Server(object):
-    def __init__(self):
+PASS = ''
+
+# CONST
+BUFLEN = 4096 * 4
+TIMEOUT = 60
+DEFAULT_HOST = '127.0.0.1:$Dropbear_Port1'
+RESPONSE = '$WsResponse'
+
+class Server(threading.Thread):
+    def __init__(self, host, port):
+        threading.Thread.__init__(self)
         self.running = False
-        self.host = '0.0.0.0'
-        self.dhost = '127.0.0.1'
-        self._current_proc = 0
-        self.port = $WsPort
+        self.host = host
+        self.port = port
         self.threads = []
-        print("Listening on port %s." % (self.port))
+        self.threadsLock = threading.Lock()
+        self.logLock = threading.Lock()
 
     def run(self):
-        self.soc = socket(AF_INET)
-        self.soc.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.soc = socket.socket(socket.AF_INET)
+        self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.soc.settimeout(2)
         self.soc.bind((self.host, self.port))
         self.soc.listen(0)
-        self.running = 1
+        self.running = True
 
         try:
             while self.running:
                 try:
                     c, addr = self.soc.accept()
                     c.setblocking(1)
-                except timeout:
+                except socket.timeout:
                     continue
 
                 conn = ConnectionHandler(c, self, addr)
-                self.addConn(conn)
                 conn.start()
+                self.addConn(conn)
         finally:
             self.running = False
             self.soc.close()
-    
-    def addConn(self, thread):
-        self.threads.append(thread)
-                             
-    def removeConn(self, thread):
-        self.threads.remove(thread)
-    
-    def close(self):
-    	for thread in threads.copy():
-    	    thread.close()
-            
-def splitlines(str):
-    return split('[\r\n]+', str)
 
-class ConnectionHandler(Thread):
+    def printLog(self, log):
+        self.logLock.acquire()
+        print log
+        self.logLock.release()
+
+    def addConn(self, conn):
+        try:
+            self.threadsLock.acquire()
+            if self.running:
+                self.threads.append(conn)
+        finally:
+            self.threadsLock.release()
+
+    def removeConn(self, conn):
+        try:
+            self.threadsLock.acquire()
+            self.threads.remove(conn)
+        finally:
+            self.threadsLock.release()
+
+    def close(self):
+        try:
+            self.running = False
+            self.threadsLock.acquire()
+
+            threads = list(self.threads)
+            for c in threads:
+                c.close()
+        finally:
+            self.threadsLock.release()
+
+class ConnectionHandler(threading.Thread):
     def __init__(self, socClient, server, addr):
-        super().__init__()
+        threading.Thread.__init__(self)
+        self.clientClosed = False
         self.targetClosed = True
         self.client = socClient
-        self.client_buffer = ""
+        self.client_buffer = ''
         self.server = server
-        self.sshport = $Dropbear_Port1
-        
+        self.log = 'Connection: ' + str(addr)
+
     def close(self):
         try:
             if not self.clientClosed:
-                self.client.shutdown(SHUT_RDWR)
+                self.client.shutdown(socket.SHUT_RDWR)
                 self.client.close()
         except:
             pass
@@ -404,129 +422,199 @@ class ConnectionHandler(Thread):
 
         try:
             if not self.targetClosed:
-                self.target.shutdown(SHUT_RDWR)
+                self.target.shutdown(socket.SHUT_RDWR)
                 self.target.close()
         except:
             pass
         finally:
             self.targetClosed = True
-            self.server.removeConn(self)
-    
-    def log_time(self, msg):
-        #print(strftime("[%H:%M:%S]"), msg)
-        pass
-    
+
     def run(self):
         try:
-            self.client_buffer = self.client.recv(recvbuff)
-            buff = self.client_buffer
-            
-            hostPort =str(self.server.dhost)
-            #self.log_time(f"client: {self.cl_addr} - server: {hostPort} - buff: {buff}")          
-            self.method_CONNECT(hostPort, self.sshport)
-            
+            self.client_buffer = self.client.recv(BUFLEN)
+
+            hostPort = self.findHeader(self.client_buffer, 'X-Real-Host')
+
+            if hostPort == '':
+                hostPort = DEFAULT_HOST
+
+            split = self.findHeader(self.client_buffer, 'X-Split')
+
+            if split != '':
+                self.client.recv(BUFLEN)
+
+            if hostPort != '':
+                passwd = self.findHeader(self.client_buffer, 'X-Pass')
+				
+                if len(PASS) != 0 and passwd == PASS:
+                    self.method_CONNECT(hostPort)
+                elif len(PASS) != 0 and passwd != PASS:
+                    self.client.send('HTTP/1.1 400 WrongPass!\r\n\r\n')
+                elif hostPort.startswith('127.0.0.1') or hostPort.startswith('localhost'):
+                    self.method_CONNECT(hostPort)
+                else:
+                    self.client.send('HTTP/1.1 403 Forbidden!\r\n\r\n')
+            else:
+                print '- No X-Real-Host!'
+                self.client.send('HTTP/1.1 400 NoXRealHost!\r\n\r\n')
+
         except Exception as e:
-            self.log_time(f"- Error: {type(e).__name__}: {e}")
-            
+            self.log += ' - error: ' + e.strerror
+            self.server.printLog(self.log)
+	    pass
         finally:
             self.close()
+            self.server.removeConn(self)
 
-    @staticmethod	    
-    def findHeader(headerToBeFound, headers):
-        headers = {
-            headerList[0].strip().lower(): (headerList[1].strip() if len(headerList)==2 else "")
-                  for header in splitlines(headers)
-                for headerList in [header.split(":", maxsplit=1)]
-        }	        
+    def findHeader(self, head, header):
+        aux = head.find(header + ': ')
 
-        return headers.get(headerToBeFound.lower(), "")
+        if aux == -1:
+            return ''
 
-    def connect_target(self, host, port):
-        addr = host.rsplit(":", maxsplit=1)
-        if len(addr)==2:
-            host = addr[0]
-        
-        (soc_family, soc_type, proto, _, address) = getaddrinfo(host, port)[0]
+        aux = head.find(':', aux)
+        head = head[aux+2:]
+        aux = head.find('\r\n')
 
-        self.target = socket(soc_family, soc_type, proto)
+        if aux == -1:
+            return ''
+
+        return head[:aux];
+
+    def connect_target(self, host):
+        i = host.find(':')
+        if i != -1:
+            port = int(host[i+1:])
+            host = host[:i]
+        else:
+            if self.method=='CONNECT':
+                port = 443
+            else:
+                port = $WsPort
+
+        (soc_family, soc_type, proto, _, address) = socket.getaddrinfo(host, port)[0]
+
+        self.target = socket.socket(soc_family, soc_type, proto)
         self.targetClosed = False
         self.target.connect(address)
-        self.t_addr = address
 
-    def method_CONNECT(self, path, port):
-        self.connect_target(path, port)
-        self.client.send(success)
-        self.client_buffer = ""
+    def method_CONNECT(self, path):
+        self.log += ' - CONNECT ' + path
+
+        self.connect_target(path)
+        self.client.sendall(RESPONSE)
+        self.client_buffer = ''
+
+        self.server.printLog(self.log)
         self.doCONNECT()
-    
+
     def doCONNECT(self):
-        client, target = self.client, self.target
-        socs = {client, target}
+        socs = [self.client, self.target]
+        count = 0
         error = False
-        count=0
         while True:
-            (recv, _, err) = select(socs, [], socs, 3)
+            count += 1
+            (recv, _, err) = select.select(socs, [], socs, 3)
             if err:
-                count+=1
-                sleep(1)
-            elif recv:
+                error = True
+            if recv:
                 for in_ in recv:
-                    try:
-                        data = in_.recv(recvbuff)
+		    try:
+                        data = in_.recv(BUFLEN)
                         if data:
-                            count=0
-                            if in_ is target:
-                                client.sendall(data)
-                            elif in_ is client:
-                                target.sendall(data)
-                        else:
-                            count+=1
-                            break
-                    except Exception as e:
-                        #self.log_time(f"- Error: {type(e).__name__}: {e}")
-                        count+=1
-                else:
-                    continue
+			    if in_ is self.target:
+				self.client.send(data)
+                            else:
+                                while data:
+                                    byte = self.target.send(data)
+                                    data = data[byte:]
+
+                            count = 0
+			else:
+			    break
+		    except:
+                        error = True
+                        break
+            if count == TIMEOUT:
+                error = True
+
+            if error:
                 break
 
-def main():
-    pidx=str(os.getpid())
-    pid=open(ploc+'/.pid', 'w')
-    pid.write(pidx)
-    pid.close()
-    print("\033[0;34m="*8,"\033[1;32mPROXY SOCKS","\033[0;34m="*8,"\n\033[1;33m\033[1;32m")
-    server = Server()
-    print('PID:', pidx)
-    print('\n'+"\033[0;34m="*11,"\033[1;32mDEEKAY","\033[0;34m=\033[1;37m"*11,"\n")
-    server.run()
-    print("\nCancelled")
-    exit()
+def print_usage():
+    print 'Usage: proxy.py -p <port>'
+    print '       proxy.py -b <bindAddr> -p <port>'
+    print '       proxy.py -b 0.0.0.0 -p $WsPort'
 
-if __name__ == "__main__":
+def parse_args(argv):
+    global LISTENING_ADDR
+    global LISTENING_PORT
+
+    try:
+        opts, args = getopt.getopt(argv,"hb:p:",["bind=","port="])
+    except getopt.GetoptError:
+        print_usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print_usage()
+            sys.exit()
+        elif opt in ("-b", "--bind"):
+            LISTENING_ADDR = arg
+        elif opt in ("-p", "--port"):
+            LISTENING_PORT = int(arg)
+
+
+def main(host=LISTENING_ADDR, port=LISTENING_PORT):
+
+    print "\n:-------PythonProxy-------:\n"
+    print "Listening addr: " + LISTENING_ADDR
+    print "Listening port: " + str(LISTENING_PORT) + "\n"
+    print ":-------------------------:\n"
+
+    server = Server(LISTENING_ADDR, LISTENING_PORT)
+    server.start()
+
+    while True:
+        try:
+            time.sleep(2)
+        except KeyboardInterrupt:
+            print 'Stopping...'
+            server.close()
+            break
+
+if __name__ == '__main__':
+    parse_args(sys.argv[1:])
     main()
 Socks
 
-# creating a service
+# Creating a service
 cat << service > /etc/systemd/system/socksproxy.service
 [Unit]
-Description=Socks Proxy
-Wants=network.target
-After=network.target
+Description=Websocket Python
+Documentation=https://google.com
+After=network.target nss-lookup.target
+
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /etc/socksproxy/proxy.py
-ExecStop=/bin/bash -c "kill -15 \`cat $loc/.pid\`"
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+Restart=on-failure
+ExecStart=/usr/bin/python -O /etc/socksproxy/proxy.py
+
 [Install]
-WantedBy=network.target
+WantedBy=multi-user.target
 service
 
-# start the service
+# Start the service
 systemctl daemon-reload
 systemctl enable socksproxy
 systemctl restart socksproxy
 systemctl status --no-pager socksproxy
 
-# NGINX CONFIGURE
+# Nginx configure
 rm /home/vps/public_html -rf
 rm /etc/nginx/sites-* -rf
 rm /etc/nginx/nginx.conf -rf
@@ -599,6 +687,7 @@ sed -i "s|Nginx_Port|$Nginx_Port|g" /etc/nginx/conf.d/vps.conf
 
 # Restarting nginx
 systemctl restart nginx
+systemctl status --no-pager nginx
 
 # Removing Duplicate Squid config
 rm -rf /etc/squid/squid.con*
@@ -643,6 +732,7 @@ sed -i "s|Squid_Port2|$Squid_Port2|g" /etc/squid/squid.conf
 # Starting Proxy server
 echo -e "Restarting Squid Proxy server..."
 systemctl restart squid
+systemctl status --no-pager squid
 
 # Make a folder
 mkdir -p /etc/deekayvpn
@@ -651,35 +741,30 @@ mkdir -p /etc/deekayvpn
 cat <<'ServiceChecker' > /etc/deekayvpn/service_checker.sh
 #!/bin/bash
 
-# Telegram configuration
 MYID="MYCHATID"
 CHANNELID="MYCHANNELID"
 KEY="MYBOTID"
 URL="https://api.telegram.org/bot${KEY}/sendMessage"
 
-# Function to send Telegram message
 send_telegram_message() {
     local TEXT="$1"
     curl -s --max-time 10 --retry 5 --retry-delay 2 --retry-max-time 10  -d "chat_id=${MYID}&text=${TEXT}&disable_web_page_preview=true&parse_mode=markdown" ${URL}
     curl -s --max-time 10 --retry 5 --retry-delay 2 --retry-max-time 10  -d "chat_id=${CHANNELID}&text=${TEXT}&disable_web_page_preview=true&parse_mode=markdown" ${URL}
 }
 
-# Server IP and location
 server_ip="IPADDRESS"
 datenow=`date +"%Y-%m-%d %T"`
 IPCOUNTRY=$(curl -s "https://freeipapi.com/api/json/${server_ip}" | jq -r '.countryName')
 
-# List of services to check and their corresponding restart commands
 declare -A service_commands=(
     ["dropbear"]="sudo systemctl restart dropbear"
     ["stunnel4"]="sudo systemctl restart stunnel4"
     ["sslh"]="sudo systemctl restart sslh"
-    ["python3"]="sudo systemctl restart socksproxy"
+    ["python"]="sudo systemctl restart socksproxy"
     ["sshd"]="sudo systemctl restart ssh"
     ["squid"]="sudo systemctl restart squid"
 )
 
-# Check and restart services
 for service in "${!service_commands[@]}"; do
     if pgrep "$service" >/dev/null 2>&1; then
         echo "$service is running."
@@ -708,10 +793,48 @@ sed -i "s|#SystemMaxUse=|SystemMaxUse=10M|g" /etc/systemd/journald.conf
 sed -i "s|#SystemMaxFileSize=|SystemMaxFileSize=1M|g" /etc/systemd/journald.conf
 systemctl restart systemd-journald
 
+# Log Settings
+rm -f /etc/logrotate.d/rsyslog
+cat <<'logrotate' > /etc/logrotate.d/rsyslog
+/var/log/syslog
+{
+        rotate 2
+        daily
+        size 500M
+        missingok
+        notifempty
+        create 640 syslog adm
+        postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+        endscript
+}
+
+/var/log/kern.log
+/var/log/auth.log
+{
+        rotate 4
+        weekly
+        missingok
+        notifempty
+        compress
+        delaycompress
+        sharedscripts
+        postrotate
+                /usr/lib/rsyslog/rsyslog-rotate
+        endscript
+}
+logrotate
+chown root:root /var/log
+chmod 755 /var/log
+chown root:root /var/log
+chown syslog:adm /var/log/syslog
+chmod 640 /var/log/syslog
+logrotate -v -f /etc/logrotate.d/rsyslog
+
 # CONFIGURE SLOWDNS
 rm -rf /etc/slowdns
 mkdir -m 777 /etc/slowdns
-#ServerKEY
+# ServerKEY
 cat > /etc/slowdns/server.key << END
 $Serverkey
 END
@@ -728,7 +851,7 @@ chmod +x /etc/slowdns/sldns-server
 iptables -I INPUT -p udp --dport 5300 -j ACCEPT
 iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5300
 
-#install server-sldns.service
+# Install server-sldns.service
 cat > /etc/systemd/system/server-sldns.service << END
 [Unit]
 Description=Server SlowDNS By TekidoerVPN
@@ -748,7 +871,7 @@ Restart=on-failure
 WantedBy=multi-user.target
 END
 
-#permission service slowdns
+# Permission service slowdns
 cd
 chmod +x /etc/systemd/system/server-sldns.service
 pkill sldns-server
@@ -763,6 +886,7 @@ systemctl status --no-pager server-sldns
 wget -N --no-check-certificate -q -O ~/install_server.sh https://raw.githubusercontent.com/RepositoriesDexter/Hysteria/main/install_server.sh; chmod +x ~/install_server.sh; ./install_server.sh --version v1.3.5
 rm -f /etc/hysteria/config.json
 echo '{
+  "log_level": "fatal",
   "listen": ":5666",
   "cert": "/etc/hysteria/hysteria.crt",
   "key": "/etc/hysteria/hysteria.key",
@@ -777,7 +901,7 @@ echo '{
 }
 ' >> /etc/hysteria/config.json
 
-#Creating Hysteria CERT
+# Creating Hysteria CERT
 cat << EOF > /etc/hysteria/hysteria.crt
 Certificate:
     Data:
@@ -871,6 +995,7 @@ chmod 755 /etc/hysteria/hysteria.key
 iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 20000:50000 -j DNAT --to-destination :5666
 systemctl enable hysteria-server.service
 systemctl restart hysteria-server.service
+systemctl status --no-pager hysteria-server.service
 
 # Creating startup 1 script using cat eof tricks
 cat <<'deekayz' > /etc/deekaystartup
@@ -889,16 +1014,16 @@ iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5300
 # Disable IpV6
 echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
 
-# add DNS server ipv4
+# Add DNS server ipv4
 echo "nameserver DNS1" > /etc/resolv.conf
 echo "nameserver DNS2" >> /etc/resolv.conf
 
-# for sslh
+# For sslh
 mkdir -p /var/run/sslh
 touch /var/run/sslh/sslh.pid
 chmod 777 /var/run/sslh/sslh.pid
 
-# for udp
+# For udp
 iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 20000:50000 -j DNAT --to-destination :5666
 
 deekayz
@@ -926,6 +1051,7 @@ deekayx
 chmod +x /etc/deekaystartup
 systemctl enable deekaystartup
 systemctl start deekaystartup
+systemctl status --no-pager deekaystartup
 cd
 
 # Pull BadVPN Binary 64bit or 32bit
@@ -955,12 +1081,12 @@ deekayb
 
 systemctl enable badvpn
 systemctl start badvpn
-
+systemctl status --no-pager badvpn
 
 # Some Final Cronjob
 echo "* * * * * root /bin/bash /etc/deekayvpn/service_checker.sh >/dev/null 2>&1" > /etc/cron.d/service-checker
 
-# download script
+# Download script
 cd /usr/local/bin
 wget -O premium-script.tar.gz "https://www.dropbox.com/s/1ex9tr7hzoh53ln/premium-script.tar.gz"
 tar -xvf premium-script.tar.gz
@@ -977,7 +1103,7 @@ cd
 echo " "
 echo " "
 echo "PREMIUM SCRIPT SUCCESSFULLY INSTALLED!"
-echo "SCRIPT BY DOPE~KID"
+echo "SCRIPT BY TEKIDOER"
 echo "PLEASE WAIT..."
 echo " "
 
@@ -1021,7 +1147,7 @@ echo ""
 clear
 echo ""
 echo ""
-figlet Deekay Script -c | lolcat
+figlet Tekidoer Script -c | lolcat
 echo ""
 echo "       Installation Complete! System need to reboot to apply all changes! "
 history -c;

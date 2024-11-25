@@ -18,13 +18,13 @@ Squid_Port2='8080'
 
 # Python Socks Proxy
 WsPort='80'  # for port 8080 change cloudflare SSL/TLS to full
-WsResponse='HTTP/1.1 101 Switching Protocols\r\n\r\n'
+WsResponse='HTTP/1.1 101 Switching AustroPlus Protocols\r\n\r\n'
 
 # SSLH Port
 MainPort='666' # main port to tunnel default 443
 
 # SSH SlowDNS
-Nameserver='dns.tekidoervpn.site' # add NS server cloudflare
+Nameserver='apvt-dns.tekidoervpn.site' # add NS server cloudflare
 Serverkey='819d82813183e4be3ca1ad74387e47c0c993b81c601b2d1473a3f47731c404ae'
 Serverpub='7fbd1f8aa0abfe15a7903e837f78aba39cf61d36f183bd604daa2fe4ef3b7b59'
 
@@ -40,7 +40,7 @@ MyVPS_Time='Africa/Johannesburg'
 
 # Telegram IDs
 My_Chat_ID='835541277'
-My_Channel_ID='1482504739'
+My_Channel_ID='-1001785530473'
 My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
 
 ######################################
@@ -112,7 +112,8 @@ systemctl status --no-pager webmin
 
 # Banner
 cat <<'deekay77' > /etc/zorro-luffy
-<br>
+<br><img alt="3taM3DMn/IWeI09cZR6NOg==" 
+style="display:none;">
 <font color="#C12267">TEKIDOER | AUSTROPLUS | SERVER<br></font>
 <br>
 <font color="#b3b300"> x No DDOS<br></font>
@@ -121,7 +122,7 @@ cat <<'deekay77' > /etc/zorro-luffy
 <font color="blue"> x No Phishing<br></font>
 <font color="#A810FF"> x No Hacking<br></font>
 <br>
-<font color="red">• BROUGHT TO YOU BY <br></font><font color="#00cccc">https://t.me/tekidoer !<br></font>
+<font color="red">• BROUGHT TO YOU BY <br></font><font color="#00cccc">https://t.me/Tekidoer !<br></font>
 deekay77
 
 # Removing some duplicated sshd server configs
@@ -730,8 +731,8 @@ iptables -t nat -I PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5300
 #install server-sldns.service
 cat > /etc/systemd/system/server-sldns.service << END
 [Unit]
-Description=Server SlowDNS By DeekayVPN
-Documentation=https://deekayvpn.net
+Description=Server SlowDNS By TekidoerVPN
+Documentation=https://tekidoervpn.site
 After=network.target nss-lookup.target
 
 [Service]
@@ -771,7 +772,7 @@ echo '{
   "obfs": "Tekidoer",
   "auth": {
     "mode": "passwords",
-    "config": ["Tekidoer123"]
+    "config": ["Tekidoer@123"]
   }
 }
 ' >> /etc/hysteria/config.json

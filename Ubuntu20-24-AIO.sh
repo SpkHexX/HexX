@@ -800,7 +800,7 @@ cat <<'logrotate' > /etc/logrotate.d/rsyslog
 {
         rotate 2
         daily
-        size 500M
+        size 1000M
         missingok
         notifempty
         create 640 syslog adm

@@ -7,7 +7,7 @@ SSH_Port1='22'
 SSH_Port2='299'
 
 # Dropbear Ports
-Dropbear_Port1='143'
+Dropbear_Port1='790'
 Dropbear_Port2='550'
 
 # Stunnel Ports
@@ -41,7 +41,7 @@ MyVPS_Time='Africa/Johannesburg'
 
 # Telegram IDs
 My_Chat_ID='835541277'
-My_Channel_ID='-1001785530473'
+My_Channel_ID='1482504739'
 My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
 
 ######################################
@@ -113,7 +113,7 @@ systemctl status --no-pager webmin
 
 # Banner
 cat <<'deekay77' > /etc/zorro-luffy
-<br><img alt="3taM3DMn/IWeI09cZR6NOg==" 
+<br><img alt="gIUR1OXQaBdVqlNfpZuYxiE+T/I=" 
 style="display:none;">
 <font color="#C12267">TEKIDOER | AUSTROPLUS | SERVER<br></font>
 <br>
@@ -800,7 +800,7 @@ cat <<'logrotate' > /etc/logrotate.d/rsyslog
 {
         rotate 2
         daily
-        size 1000M
+        size 500M
         missingok
         notifempty
         create 640 syslog adm
@@ -896,7 +896,7 @@ echo '{
   "obfs": "Tekidoer",
   "auth": {
     "mode": "passwords",
-    "config": ["Tekidoer@123"]
+    "config": ["Tekidoer:123"]
   }
 }
 ' >> /etc/hysteria/config.json

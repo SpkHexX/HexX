@@ -41,7 +41,6 @@ MyVPS_Time='Africa/Johannesburg'
 
 # Telegram IDs
 My_Chat_ID='835541277'
-My_Channel_ID='1482504739'
 My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
 
 ######################################
@@ -742,37 +741,56 @@ cat <<'ServiceChecker' > /etc/deekayvpn/service_checker.sh
 #!/bin/bash
 
 MYID="MYCHATID"
-CHANNELID="MYCHANNELID"
 KEY="MYBOTID"
 URL="https://api.telegram.org/bot${KEY}/sendMessage"
 
 send_telegram_message() {
     local TEXT="$1"
     curl -s --max-time 10 --retry 5 --retry-delay 2 --retry-max-time 10  -d "chat_id=${MYID}&text=${TEXT}&disable_web_page_preview=true&parse_mode=markdown" ${URL}
-    curl -s --max-time 10 --retry 5 --retry-delay 2 --retry-max-time 10  -d "chat_id=${CHANNELID}&text=${TEXT}&disable_web_page_preview=true&parse_mode=markdown" ${URL}
 }
 
 server_ip="IPADDRESS"
-datenow=`date +"%Y-%m-%d %T"`
+datenow=$(date +"%Y-%m-%d %T")
 IPCOUNTRY=$(curl -s "https://freeipapi.com/api/json/${server_ip}" | jq -r '.countryName')
 
-declare -A service_commands=(
-    ["dropbear"]="sudo systemctl restart dropbear"
-    ["stunnel4"]="sudo systemctl restart stunnel4"
-    ["sslh"]="sudo systemctl restart sslh"
-    ["python"]="sudo systemctl restart socksproxy"
-    ["sshd"]="sudo systemctl restart ssh"
-    ["squid"]="sudo systemctl restart squid"
+declare -A service_ports=(
+    ["dropbear"]="DROPBEARPORT1,DROPBEARPORT2"
+    ["stunnel4"]="STUNNELPORT"
+    ["sslh"]="SSLHPORT"
+    ["python"]="SOCKSPORT"
+    ["squid"]="SQUIDPORT1,SQUIDPORT2"
+    ["nginx"]="NGINXPORT"
+    ["sshd"]="SSHPORT1,SSHPORT2"
 )
 
-for service in "${!service_commands[@]}"; do
-    if pgrep "$service" >/dev/null 2>&1; then
-        echo "$service is running."
-    else
-        echo "$service is not running. Restarting..."
+declare -A service_commands=(
+    ["dropbear"]="sudo systemctl --force --force restart dropbear"
+    ["stunnel4"]="sudo systemctl --force --force restart stunnel4"
+    ["sslh"]="sudo systemctl --force --force restart sslh"
+    ["python"]="sudo systemctl --force --force restart socksproxy"
+    ["squid"]="sudo systemctl --force --force restart squid"
+    ["nginx"]="sudo systemctl --force --force restart nginx"
+    ["sshd"]="sudo systemctl --force --force restart ssh"
+)
+
+for service in "${!service_ports[@]}"; do
+    ports="${service_ports[$service]}"
+    all_ports_ok=true
+
+    for port in ${ports//,/ }; do
+        if ! netstat -ntlp | awk '{print $4}' | grep -q ":$port\$"; then
+            all_ports_ok=false
+            break
+        fi
+    done
+
+    if ! pgrep "$service" >/dev/null 2>&1 || [ "$all_ports_ok" = false ]; then
+        echo "$service is not functioning correctly (missing ports or process). Restarting..."
         eval "${service_commands[$service]}" >/dev/null 2>&1
-        TEXT="Service *$service* was offline on server *${IPCOUNTRY}* and has been restarted successful at *${datenow}*."
+        TEXT="Service *$service* was offline or missing port(s) *$ports* on server *${IPCOUNTRY}* ($server_ip). It has been restarted successfully at *${datenow}*."
         send_telegram_message "$TEXT"
+    else
+        echo "$service is running and all required ports are bound: $ports."
     fi
 done
 ServiceChecker
@@ -782,6 +800,16 @@ sed -i "s|MYCHATID|$My_Chat_ID|g" "/etc/deekayvpn/service_checker.sh"
 sed -i "s|MYCHANNELID|$My_Channel_ID|g" "/etc/deekayvpn/service_checker.sh"
 sed -i "s|MYBOTID|$My_Bot_Key|g" "/etc/deekayvpn/service_checker.sh"
 sed -i "s|IPADDRESS|$IPADDR|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|DROPBEARPORT1|$Dropbear_Port1|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|DROPBEARPORT2|$Dropbear_Port2|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|STUNNELPORT|$Stunnel_Port|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SSLHPORT|$MainPort|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SOCKSPORT|$WsPort|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SQUIDPORT1|$Squid_Port1|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SQUIDPORT2|$Squid_Port2|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|NGINXPORT|$Nginx_Port|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SSHPORT1|$SSH_Port1|g" "/etc/deekayvpn/service_checker.sh"
+sed -i "s|SSHPORT2|$SSH_Port2|g" "/etc/deekayvpn/service_checker.sh"
 
 # Webmin Configuration
 sed -i '$ i\deekay: acl adsl-client ajaxterm apache at backup-config bacula-backup bandwidth bind8 burner change-user cluster-copy cluster-cron cluster-passwd cluster-shell cluster-software cluster-useradmin cluster-usermin cluster-webmin cpan cron custom dfsadmin dhcpd dovecot exim exports fail2ban fdisk fetchmail file filemin filter firewall firewalld fsdump grub heartbeat htaccess-htpasswd idmapd inetd init inittab ipfilter ipfw ipsec iscsi-client iscsi-server iscsi-target iscsi-tgtd jabber krb5 ldap-client ldap-server ldap-useradmin logrotate lpadmin lvm mailboxes mailcap man mon mount mysql net nis openslp package-updates pam pap passwd phpini postfix postgresql ppp-client pptp-client pptp-server proc procmail proftpd qmailadmin quota raid samba sarg sendmail servers shell shorewall shorewall6 smart-status smf software spam squid sshd status stunnel syslog-ng syslog system-status tcpwrappers telnet time tunnel updown useradmin usermin vgetty webalizer webmin webmincron webminlog wuftpd xinetd' /etc/webmin/webmin.acl
@@ -798,9 +826,7 @@ rm -f /etc/logrotate.d/rsyslog
 cat <<'logrotate' > /etc/logrotate.d/rsyslog
 /var/log/syslog
 {
-        rotate 2
         daily
-        size 500M
         missingok
         notifempty
         create 640 syslog adm
@@ -812,8 +838,8 @@ cat <<'logrotate' > /etc/logrotate.d/rsyslog
 /var/log/kern.log
 /var/log/auth.log
 {
-        rotate 4
-        weekly
+        rotate 1
+        daily
         missingok
         notifempty
         compress
@@ -1085,6 +1111,7 @@ systemctl status --no-pager badvpn
 
 # Some Final Cronjob
 echo "* * * * * root /bin/bash /etc/deekayvpn/service_checker.sh >/dev/null 2>&1" > /etc/cron.d/service-checker
+echo "*/2 * * * * root /usr/sbin/logrotate -v -f /etc/logrotate.d/rsyslog >/dev/null 2>&1" > /etc/cron.d/logrotate
 
 # Download script
 cd /usr/local/bin

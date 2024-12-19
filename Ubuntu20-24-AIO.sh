@@ -112,7 +112,7 @@ systemctl status --no-pager webmin
 
 # Banner
 cat <<'deekay77' > /etc/zorro-luffy
-<br><img alt="gIUR1OXQaBdVqlNfpZuYxiE+T/I=" 
+<br><img alt="hierNl6SyUhpz9G3zk+z2spbaN8=" 
 style="display:none;">
 <font color="#C12267">TEKIDOER | AUSTROPLUS | SERVER<br></font>
 <br>

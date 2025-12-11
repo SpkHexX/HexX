@@ -41,7 +41,7 @@ MyVPS_Time='Africa/Johannesburg'
 
 # Telegram IDs
 My_Chat_ID='835541277'
-My_Bot_Key='5993251866:AAHpV-BnGGcdvlfLsaymYkfxpoeYmWFaGs4'
+My_Bot_Key='5993251866:AAFVsuGJmf8fPNB4XgpQTxZ6aoubfLCEXd8'
 
 ######################################
 ###Tekidoer AutoScript Code Begins...###

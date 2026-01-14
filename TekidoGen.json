@@ -1,0 +1,21 @@
+{
+  "message": "Your account is disabled or expired.",
+  "Tekidoer": [
+    {
+      "User": "Tekidoer",
+      "status": "online",
+      "password": "2244",
+      "domain": "tekidoer.com",
+      "hash": "a1b2c3d4"
+    }
+  ],
+  "GuestUser": [
+    {
+      "User": "GuestUser",
+      "status": "offline",
+      "password": "0000",
+      "domain": "guest.com",
+      "hash": "0000"
+    }
+  ]
+}

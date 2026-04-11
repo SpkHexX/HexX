@@ -25,7 +25,7 @@ WsResponse='HTTP/1.1 101 Switching AustroPlus Protocols\r\n\r\n'
 MainPort='666' # main port to tunnel default 443
 
 # SSH SlowDNS
-Nameserver='apvt-dns.tekidoervpn.site' # add NS server cloudflare
+Nameserver='apvt-dns.tekidoervpn.store' # add NS server cloudflare
 Serverkey='819d82813183e4be3ca1ad74387e47c0c993b81c601b2d1473a3f47731c404ae'
 Serverpub='7fbd1f8aa0abfe15a7903e837f78aba39cf61d36f183bd604daa2fe4ef3b7b59'
 
